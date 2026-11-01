@@ -1,0 +1,2204 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const DigitalWardrobeApp());
+}
+
+/* =========================================================
+   MODEL
+========================================================= */
+
+class ClothingItem {
+  final String id;
+  String name;
+  String category;
+  String color;
+  String season;
+  String occasion;
+  double price;
+  int timesWorn;
+  bool favorite;
+
+  ClothingItem({
+    required this.id,
+    required this.name,
+    required this.category,
+    required this.color,
+    required this.season,
+    required this.occasion,
+    required this.price,
+    this.timesWorn = 0,
+    this.favorite = false,
+  });
+
+  double get costPerWear {
+    if (timesWorn == 0) return price;
+    return price / timesWorn;
+  }
+}
+
+/* =========================================================
+   APP STATE
+   No provider package required
+========================================================= */
+
+class WardrobeState extends ChangeNotifier {
+  final List<ClothingItem> items = [
+    ClothingItem(
+      id: '1',
+      name: 'White T-Shirt',
+      category: 'T-Shirt',
+      color: 'White',
+      season: 'Summer',
+      occasion: 'Casual',
+      price: 700,
+      timesWorn: 12,
+    ),
+    ClothingItem(
+      id: '2',
+      name: 'Blue Jeans',
+      category: 'Jeans',
+      color: 'Blue',
+      season: 'All Season',
+      occasion: 'Casual',
+      price: 1800,
+      timesWorn: 20,
+    ),
+    ClothingItem(
+      id: '3',
+      name: 'Black Shirt',
+      category: 'Shirt',
+      color: 'Black',
+      season: 'All Season',
+      occasion: 'Formal',
+      price: 1400,
+      timesWorn: 8,
+    ),
+    ClothingItem(
+      id: '4',
+      name: 'Denim Jacket',
+      category: 'Jacket',
+      color: 'Blue',
+      season: 'Winter',
+      occasion: 'Casual',
+      price: 2800,
+      timesWorn: 6,
+    ),
+    ClothingItem(
+      id: '5',
+      name: 'Black Sneakers',
+      category: 'Shoes',
+      color: 'Black',
+      season: 'All Season',
+      occasion: 'Casual',
+      price: 2200,
+      timesWorn: 25,
+    ),
+    ClothingItem(
+      id: '6',
+      name: 'Beige Chinos',
+      category: 'Pants',
+      color: 'Beige',
+      season: 'Summer',
+      occasion: 'Formal',
+      price: 1900,
+      timesWorn: 5,
+    ),
+  ];
+
+  void addItem(ClothingItem item) {
+    items.add(item);
+    notifyListeners();
+  }
+
+  void removeItem(String id) {
+    items.removeWhere((item) => item.id == id);
+    notifyListeners();
+  }
+
+  void toggleFavorite(String id) {
+    final item = items.firstWhere((e) => e.id == id);
+    item.favorite = !item.favorite;
+    notifyListeners();
+  }
+
+  void markWorn(String id) {
+    final item = items.firstWhere((e) => e.id == id);
+    item.timesWorn++;
+    notifyListeners();
+  }
+
+  double get totalValue {
+    return items.fold(0, (sum, item) => sum + item.price);
+  }
+
+  int get totalWears {
+    return items.fold(0, (sum, item) => sum + item.timesWorn);
+  }
+
+  double get averageCostPerWear {
+    if (items.isEmpty) return 0;
+    return items.fold(
+      0.0,
+          (sum, item) => sum + item.costPerWear,
+    ) /
+        items.length;
+  }
+
+  ClothingItem? get mostWorn {
+    if (items.isEmpty) return null;
+    return items.reduce(
+          (a, b) => a.timesWorn > b.timesWorn ? a : b,
+    );
+  }
+
+  ClothingItem? get leastWorn {
+    if (items.isEmpty) return null;
+    return items.reduce(
+          (a, b) => a.timesWorn < b.timesWorn ? a : b,
+    );
+  }
+}
+
+/* =========================================================
+   APP
+========================================================= */
+
+class DigitalWardrobeApp extends StatefulWidget {
+  const DigitalWardrobeApp({super.key});
+
+  @override
+  State<DigitalWardrobeApp> createState() =>
+      _DigitalWardrobeAppState();
+}
+
+class _DigitalWardrobeAppState
+    extends State<DigitalWardrobeApp> {
+  final WardrobeState wardrobe = WardrobeState();
+
+  @override
+  void dispose() {
+    wardrobe.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: wardrobe,
+      builder: (context, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Digital Wardrobe',
+          theme: ThemeData(
+            useMaterial3: true,
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor:
+            const Color(0xFF09090F),
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFFFF4F81),
+              brightness: Brightness.dark,
+            ),
+          ),
+          home: HomeScreen(wardrobe: wardrobe),
+        );
+      },
+    );
+  }
+}
+
+/* =========================================================
+   HOME
+========================================================= */
+
+class HomeScreen extends StatefulWidget {
+  final WardrobeState wardrobe;
+
+  const HomeScreen({
+    super.key,
+    required this.wardrobe,
+  });
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int selectedIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final screens = [
+      DashboardScreen(wardrobe: widget.wardrobe),
+      WardrobeScreen(wardrobe: widget.wardrobe),
+      StylistScreen(wardrobe: widget.wardrobe),
+      AnalyticsScreen(wardrobe: widget.wardrobe),
+      ProfileScreen(),
+    ];
+
+    return Scaffold(
+      body: screens[selectedIndex],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: selectedIndex,
+        onDestinationSelected: (index) {
+          setState(() {
+            selectedIndex = index;
+          });
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.checkroom_outlined),
+            selectedIcon: Icon(Icons.checkroom),
+            label: 'Wardrobe',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.auto_awesome_outlined),
+            selectedIcon: Icon(Icons.auto_awesome),
+            label: 'AI Stylist',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.analytics_outlined),
+            selectedIcon: Icon(Icons.analytics),
+            label: 'Analytics',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
+
+class DashboardScreen extends StatelessWidget {
+  final WardrobeState wardrobe;
+
+  const DashboardScreen({
+    super.key,
+    required this.wardrobe,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Good morning 👋',
+                      style: TextStyle(
+                        color: Colors.white54,
+                      ),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      'Your Wardrobe',
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              CircleAvatar(
+                radius: 27,
+                backgroundColor:
+                const Color(0xFFFF4F81),
+                child: const Icon(Icons.person),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 25),
+
+          const WeatherCard(),
+
+          const SizedBox(height: 25),
+
+          const SectionTitle(
+            title: "Today's Style",
+          ),
+
+          const SizedBox(height: 12),
+
+          TodayOutfitCard(wardrobe: wardrobe),
+
+          const SizedBox(height: 25),
+
+          const SectionTitle(
+            title: 'Quick Actions',
+          ),
+
+          const SizedBox(height: 12),
+
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.4,
+            children: [
+              ActionCard(
+                icon: Icons.add_a_photo,
+                title: 'Add Clothes',
+                subtitle: 'Catalog item',
+                color: Colors.pink,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddClothingScreen(
+                        wardrobe: wardrobe,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              ActionCard(
+                icon: Icons.auto_awesome,
+                title: 'AI Stylist',
+                subtitle: 'Get outfit ideas',
+                color: Colors.purple,
+                onTap: () {},
+              ),
+              ActionCard(
+                icon: Icons.luggage,
+                title: 'Pack a Trip',
+                subtitle: 'Smart packing',
+                color: Colors.blue,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PackingScreen(
+                        wardrobe: wardrobe,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              ActionCard(
+                icon: Icons.favorite,
+                title: 'Favorites',
+                subtitle:
+                '${wardrobe.items.where((e) => e.favorite).length} saved',
+                color: Colors.red,
+                onTap: () {},
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* =========================================================
+   WEATHER
+========================================================= */
+
+class WeatherCard extends StatelessWidget {
+  const WeatherCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF28284D),
+            Color(0xFF15152A),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: const Row(
+        children: [
+          Icon(
+            Icons.wb_sunny,
+            size: 50,
+            color: Colors.orangeAccent,
+          ),
+          SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Today',
+                  style: TextStyle(
+                    color: Colors.white54,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '31°C • Sunny',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Light & breathable clothing recommended',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* =========================================================
+   TODAY OUTFIT
+========================================================= */
+
+class TodayOutfitCard extends StatelessWidget {
+  final WardrobeState wardrobe;
+
+  const TodayOutfitCard({
+    super.key,
+    required this.wardrobe,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = wardrobe.items.take(3).toList();
+
+    return Container(
+      height: 220,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171720),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: Colors.white10,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment:
+        CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                color: Colors.pinkAccent,
+              ),
+              SizedBox(width: 8),
+              Text(
+                'AI Recommended Outfit',
+                style: TextStyle(
+                  color: Colors.pinkAccent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          Expanded(
+            child: Row(
+              children: items.map(
+                    (item) {
+                  return Expanded(
+                    child: Container(
+                      margin:
+                      const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF23232E),
+                        borderRadius:
+                        BorderRadius.circular(18),
+                      ),
+                      child: Column(
+                        mainAxisAlignment:
+                        MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            categoryIcon(item.category),
+                            size: 42,
+                            color:
+                            itemColor(item.color),
+                          ),
+                          const SizedBox(height: 10),
+                          Padding(
+                            padding:
+                            const EdgeInsets.symmetric(
+                              horizontal: 5,
+                            ),
+                            child: Text(
+                              item.name,
+                              maxLines: 1,
+                              overflow:
+                              TextOverflow.ellipsis,
+                              style:
+                              const TextStyle(
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* =========================================================
+   WARDROBE
+========================================================= */
+
+class WardrobeScreen extends StatefulWidget {
+  final WardrobeState wardrobe;
+
+  const WardrobeScreen({
+    super.key,
+    required this.wardrobe,
+  });
+
+  @override
+  State<WardrobeScreen> createState() =>
+      _WardrobeScreenState();
+}
+
+class _WardrobeScreenState
+    extends State<WardrobeScreen> {
+  String category = 'All';
+
+  final categories = [
+    'All',
+    'T-Shirt',
+    'Shirt',
+    'Jeans',
+    'Pants',
+    'Jacket',
+    'Shoes',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = category == 'All'
+        ? widget.wardrobe.items
+        : widget.wardrobe.items
+        .where((e) => e.category == category)
+        .toList();
+
+    return SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding:
+            const EdgeInsets.fromLTRB(20, 20, 20, 10),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'My Wardrobe',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            AddClothingScreen(
+                              wardrobe: widget.wardrobe,
+                            ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.add),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(
+            height: 48,
+            child: ListView.builder(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 20),
+              scrollDirection: Axis.horizontal,
+              itemCount: categories.length,
+              itemBuilder: (_, index) {
+                final value = categories[index];
+
+                return Padding(
+                  padding:
+                  const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(value),
+                    selected: category == value,
+                    onSelected: (_) {
+                      setState(() {
+                        category = value;
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: filtered.length,
+              gridDelegate:
+              const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: .78,
+              ),
+              itemBuilder: (_, index) {
+                return ClothingCard(
+                  item: filtered[index],
+                  wardrobe: widget.wardrobe,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* =========================================================
+   CLOTHING CARD
+========================================================= */
+
+class ClothingCard extends StatelessWidget {
+  final ClothingItem item;
+  final WardrobeState wardrobe;
+
+  const ClothingCard({
+    super.key,
+    required this.item,
+    required this.wardrobe,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          backgroundColor:
+          const Color(0xFF171720),
+          showDragHandle: true,
+          builder: (_) {
+            return Padding(
+              padding: const EdgeInsets.all(25),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    categoryIcon(item.category),
+                    size: 70,
+                    color: itemColor(item.color),
+                  ),
+                  const SizedBox(height: 15),
+                  Text(
+                    item.name,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  Text('Category: ${item.category}'),
+                  Text('Color: ${item.color}'),
+                  Text('Season: ${item.season}'),
+                  Text('Occasion: ${item.occasion}'),
+                  Text(
+                    'Worn: ${item.timesWorn} times',
+                  ),
+                  Text(
+                    'Cost per wear: ₹${item.costPerWear.toStringAsFixed(0)}',
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: () {
+                      wardrobe.markWorn(item.id);
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.check),
+                    label: const Text('Mark as Worn'),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF171720),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: Colors.white10,
+          ),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  Center(
+                    child: Icon(
+                      categoryIcon(item.category),
+                      size: 75,
+                      color: itemColor(item.color),
+                    ),
+                  ),
+                  Positioned(
+                    right: 5,
+                    top: 5,
+                    child: IconButton(
+                      onPressed: () {
+                        wardrobe.toggleFavorite(
+                          item.id,
+                        );
+                      },
+                      icon: Icon(
+                        item.favorite
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: item.favorite
+                            ? Colors.pinkAccent
+                            : Colors.white54,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding:
+              const EdgeInsets.fromLTRB(14, 5, 14, 14),
+              child: Column(
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow:
+                    TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${item.color} • ${item.timesWorn} wears',
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/* =========================================================
+   ADD CLOTHING
+========================================================= */
+
+class AddClothingScreen extends StatefulWidget {
+  final WardrobeState wardrobe;
+
+  const AddClothingScreen({
+    super.key,
+    required this.wardrobe,
+  });
+
+  @override
+  State<AddClothingScreen> createState() =>
+      _AddClothingScreenState();
+}
+
+class _AddClothingScreenState
+    extends State<AddClothingScreen> {
+  final nameController =
+  TextEditingController();
+
+  final priceController =
+  TextEditingController();
+
+  String category = 'T-Shirt';
+  String color = 'White';
+  String season = 'All Season';
+  String occasion = 'Casual';
+
+  void save() {
+    if (nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+          Text('Please enter clothing name'),
+        ),
+      );
+      return;
+    }
+
+    final price =
+        double.tryParse(priceController.text) ?? 0;
+
+    widget.wardrobe.addItem(
+      ClothingItem(
+        id: DateTime.now()
+            .millisecondsSinceEpoch
+            .toString(),
+        name: nameController.text.trim(),
+        category: category,
+        color: color,
+        season: season,
+        occasion: occasion,
+        price: price,
+      ),
+    );
+
+    Navigator.pop(context);
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    priceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Add Clothing'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: const Color(0xFF171720),
+              borderRadius:
+              BorderRadius.circular(25),
+              border: Border.all(
+                color: Colors.white12,
+              ),
+            ),
+            child: const Column(
+              mainAxisAlignment:
+              MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.checkroom,
+                  size: 65,
+                  color: Colors.white38,
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Clothing Preview',
+                  style: TextStyle(
+                    color: Colors.white54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 25),
+
+          AppTextField(
+            controller: nameController,
+            label: 'Clothing Name',
+            icon: Icons.label_outline,
+          ),
+
+          const SizedBox(height: 15),
+
+          AppTextField(
+            controller: priceController,
+            label: 'Purchase Price',
+            icon: Icons.currency_rupee,
+            keyboardType:
+            TextInputType.number,
+          ),
+
+          const SizedBox(height: 15),
+
+          AppDropdown(
+            label: 'Category',
+            value: category,
+            values: const [
+              'T-Shirt',
+              'Shirt',
+              'Jeans',
+              'Pants',
+              'Jacket',
+              'Dress',
+              'Shoes',
+              'Accessories',
+            ],
+            onChanged: (value) {
+              setState(() {
+                category = value!;
+              });
+            },
+          ),
+
+          const SizedBox(height: 15),
+
+          AppDropdown(
+            label: 'Color',
+            value: color,
+            values: const [
+              'White',
+              'Black',
+              'Blue',
+              'Red',
+              'Green',
+              'Beige',
+              'Pink',
+              'Yellow',
+              'Brown',
+              'Grey',
+            ],
+            onChanged: (value) {
+              setState(() {
+                color = value!;
+              });
+            },
+          ),
+
+          const SizedBox(height: 15),
+
+          AppDropdown(
+            label: 'Season',
+            value: season,
+            values: const [
+              'All Season',
+              'Summer',
+              'Winter',
+              'Monsoon',
+            ],
+            onChanged: (value) {
+              setState(() {
+                season = value!;
+              });
+            },
+          ),
+
+          const SizedBox(height: 15),
+
+          AppDropdown(
+            label: 'Occasion',
+            value: occasion,
+            values: const [
+              'Casual',
+              'Formal',
+              'Party',
+              'College',
+              'Sports',
+              'Travel',
+            ],
+            onChanged: (value) {
+              setState(() {
+                occasion = value!;
+              });
+            },
+          ),
+
+          const SizedBox(height: 30),
+
+          SizedBox(
+            height: 55,
+            child: FilledButton.icon(
+              onPressed: save,
+              icon: const Icon(Icons.check),
+              label: const Text(
+                'Add to Wardrobe',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* =========================================================
+   AI STYLIST
+========================================================= */
+
+class StylistScreen extends StatefulWidget {
+  final WardrobeState wardrobe;
+
+  const StylistScreen({
+    super.key,
+    required this.wardrobe,
+  });
+
+  @override
+  State<StylistScreen> createState() =>
+      _StylistScreenState();
+}
+
+class _StylistScreenState
+    extends State<StylistScreen> {
+  String occasion = 'Casual';
+
+  List<ClothingItem> recommendation = [];
+
+  final occasions = [
+    'Casual',
+    'College',
+    'Formal',
+    'Party',
+    'Interview',
+    'Travel',
+    'Date',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    generateOutfit();
+  }
+
+  void generateOutfit() {
+    final all = widget.wardrobe.items;
+
+    final matching = all
+        .where(
+          (item) =>
+      item.occasion == occasion ||
+          occasion == 'Casual',
+    )
+        .toList();
+
+    if (matching.length >= 3) {
+      recommendation =
+          matching.take(3).toList();
+    } else {
+      recommendation =
+          all.take(min(3, all.length)).toList();
+    }
+
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                color: Colors.pinkAccent,
+              ),
+              SizedBox(width: 8),
+              Text(
+                'AI Stylist',
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          const Text(
+            'Create an outfit from clothes you already own.',
+            style: TextStyle(
+              color: Colors.white54,
+            ),
+          ),
+
+          const SizedBox(height: 25),
+
+          const Text(
+            'Choose occasion',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: occasions.map(
+                  (value) {
+                return ChoiceChip(
+                  label: Text(value),
+                  selected:
+                  occasion == value,
+                  onSelected: (_) {
+                    setState(() {
+                      occasion = value;
+                    });
+                    generateOutfit();
+                  },
+                );
+              },
+            ).toList(),
+          ),
+
+          const SizedBox(height: 25),
+
+          const WeatherCard(),
+
+          const SizedBox(height: 25),
+
+          const Text(
+            'Recommended Look',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          ...recommendation.map(
+                (item) {
+              return Container(
+                margin:
+                const EdgeInsets.only(bottom: 12),
+                padding:
+                const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color:
+                  const Color(0xFF171720),
+                  borderRadius:
+                  BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor:
+                      itemColor(item.color)
+                          .withOpacity(.15),
+                      child: Icon(
+                        categoryIcon(
+                            item.category),
+                        color:
+                        itemColor(item.color),
+                      ),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.name,
+                            style:
+                            const TextStyle(
+                              fontWeight:
+                              FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '${item.category} • ${item.color}',
+                            style:
+                            const TextStyle(
+                              color:
+                              Colors.white54,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.check_circle,
+                      color: Colors.greenAccent,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+          FilledButton.icon(
+            onPressed: generateOutfit,
+            icon: const Icon(Icons.refresh),
+            label:
+            const Text('Generate New Outfit'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* =========================================================
+   ANALYTICS
+========================================================= */
+
+class AnalyticsScreen extends StatelessWidget {
+  final WardrobeState wardrobe;
+
+  const AnalyticsScreen({
+    super.key,
+    required this.wardrobe,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const Text(
+            'Wardrobe Analytics',
+            style: TextStyle(
+              fontSize: 30,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 5),
+
+          const Text(
+            'Understand how you use your clothes.',
+            style: TextStyle(
+              color: Colors.white54,
+            ),
+          ),
+
+          const SizedBox(height: 25),
+
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics:
+            const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.35,
+            children: [
+              StatCard(
+                title: 'Items',
+                value:
+                '${wardrobe.items.length}',
+                icon: Icons.checkroom,
+              ),
+              StatCard(
+                title: 'Wardrobe Value',
+                value:
+                '₹${wardrobe.totalValue.toStringAsFixed(0)}',
+                icon: Icons.account_balance_wallet,
+              ),
+              StatCard(
+                title: 'Avg Cost/Wear',
+                value:
+                '₹${wardrobe.averageCostPerWear.toStringAsFixed(0)}',
+                icon: Icons.trending_down,
+              ),
+              StatCard(
+                title: 'Total Wears',
+                value:
+                '${wardrobe.totalWears}',
+                icon: Icons.repeat,
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 25),
+
+          const Text(
+            'Wear Frequency',
+            style: TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 15),
+
+          SimpleBarChart(
+            items: wardrobe.items,
+          ),
+
+          const SizedBox(height: 25),
+
+          InsightCard(
+            title: 'Most Worn',
+            item: wardrobe.mostWorn,
+            icon:
+            Icons.local_fire_department,
+          ),
+
+          const SizedBox(height: 12),
+
+          InsightCard(
+            title: 'Needs More Love',
+            item: wardrobe.leastWorn,
+            icon: Icons.favorite_border,
+          ),
+
+          const SizedBox(height: 25),
+
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF173D32),
+                  Color(0xFF12251F),
+                ],
+              ),
+              borderRadius:
+              BorderRadius.circular(22),
+            ),
+            child: Column(
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.eco,
+                  color: Colors.greenAccent,
+                  size: 35,
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Shop Your Closet',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  'You already have ${wardrobe.items.length} items. Try creating new combinations before buying something new.',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* =========================================================
+   SIMPLE BAR CHART
+   Replaces fl_chart
+========================================================= */
+
+class SimpleBarChart extends StatelessWidget {
+  final List<ClothingItem> items;
+
+  const SimpleBarChart({
+    super.key,
+    required this.items,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const SizedBox();
+    }
+
+    final maxValue = items
+        .map((e) => e.timesWorn)
+        .reduce(max);
+
+    return Container(
+      height: 260,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171720),
+        borderRadius:
+        BorderRadius.circular(22),
+      ),
+      child: Row(
+        crossAxisAlignment:
+        CrossAxisAlignment.end,
+        children: items.map(
+              (item) {
+            final height =
+            maxValue == 0
+                ? 0.0
+                : 150 *
+                item.timesWorn /
+                maxValue;
+
+            return Expanded(
+              child: Padding(
+                padding:
+                const EdgeInsets.symmetric(
+                  horizontal: 5,
+                ),
+                child: Column(
+                  mainAxisAlignment:
+                  MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${item.timesWorn}',
+                      style:
+                      const TextStyle(
+                        fontSize: 10,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Container(
+                      height: height,
+                      decoration:
+                      BoxDecoration(
+                        color:
+                        Colors.pinkAccent,
+                        borderRadius:
+                        BorderRadius.circular(
+                          8,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      item.category,
+                      maxLines: 1,
+                      overflow:
+                      TextOverflow.ellipsis,
+                      style:
+                      const TextStyle(
+                        fontSize: 9,
+                        color:
+                        Colors.white54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ).toList(),
+      ),
+    );
+  }
+}
+
+/* =========================================================
+   PACKING
+========================================================= */
+
+class PackingScreen extends StatefulWidget {
+  final WardrobeState wardrobe;
+
+  const PackingScreen({
+    super.key,
+    required this.wardrobe,
+  });
+
+  @override
+  State<PackingScreen> createState() =>
+      _PackingScreenState();
+}
+
+class _PackingScreenState
+    extends State<PackingScreen> {
+  int days = 3;
+
+  List<String> packing = [];
+
+  @override
+  void initState() {
+    super.initState();
+    generatePacking();
+  }
+
+  void generatePacking() {
+    final items = widget.wardrobe.items;
+
+    packing = [
+      ...items
+          .where(
+            (e) =>
+        e.category == 'T-Shirt' ||
+            e.category == 'Shirt',
+      )
+          .take(min(days, 4))
+          .map((e) => e.name),
+      ...items
+          .where(
+            (e) =>
+        e.category == 'Jeans' ||
+            e.category == 'Pants',
+      )
+          .take(2)
+          .map((e) => e.name),
+      'Toiletries',
+      'Charger',
+      'Power Bank',
+      'Sunglasses',
+    ];
+
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title:
+        const Text('Smart Packing'),
+      ),
+      body: ListView(
+        padding:
+        const EdgeInsets.all(20),
+        children: [
+          const Text(
+            'Pack smarter',
+            style: TextStyle(
+              fontSize: 30,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          Text(
+            '$days days trip',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          Slider(
+            value: days.toDouble(),
+            min: 1,
+            max: 14,
+            divisions: 13,
+            label: '$days days',
+            onChanged: (value) {
+              setState(() {
+                days = value.round();
+              });
+            },
+          ),
+
+          FilledButton.icon(
+            onPressed: generatePacking,
+            icon:
+            const Icon(Icons.auto_awesome),
+            label: const Text(
+              'Generate Packing List',
+            ),
+          ),
+
+          const SizedBox(height: 25),
+
+          const Text(
+            'Packing List',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          ...packing.map(
+                (item) {
+              return Card(
+                color:
+                const Color(0xFF171720),
+                child: CheckboxListTile(
+                  value: false,
+                  onChanged: (_) {},
+                  title: Text(item),
+                  secondary: const Icon(
+                    Icons.luggage_outlined,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* =========================================================
+   PROFILE
+========================================================= */
+
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ListView(
+        padding:
+        const EdgeInsets.all(20),
+        children: [
+          const SizedBox(height: 25),
+
+          const CircleAvatar(
+            radius: 55,
+            backgroundColor:
+            Color(0xFFFF4F81),
+            child: Icon(
+              Icons.person,
+              size: 60,
+            ),
+          ),
+
+          const SizedBox(height: 15),
+
+          const Center(
+            child: Text(
+              'Fashion Explorer',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          const Center(
+            child: Text(
+              'Personal Style Profile',
+              style: TextStyle(
+                color: Colors.white54,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 30),
+
+          ProfileTile(
+            icon: Icons.palette_outlined,
+            title: 'Color Analysis',
+            subtitle:
+            'Discover your personal palette',
+          ),
+
+          ProfileTile(
+            icon:
+            Icons.accessibility_new,
+            title: 'Style Guide',
+            subtitle:
+            'Personalized styling preferences',
+          ),
+
+          ProfileTile(
+            icon: Icons.people_outline,
+            title: 'Friends',
+            subtitle:
+            'Share outfits and get suggestions',
+          ),
+
+          ProfileTile(
+            icon: Icons.recycling_outlined,
+            title: 'Sustainability',
+            subtitle:
+            'Track your wardrobe impact',
+          ),
+
+          ProfileTile(
+            icon: Icons.sell_outlined,
+            title: 'Resale',
+            subtitle:
+            'Sell clothes you no longer use',
+          ),
+
+          ProfileTile(
+            icon: Icons.build_outlined,
+            title: 'Repair & Renew',
+            subtitle:
+            'Keep your favorite pieces alive',
+          ),
+
+          ProfileTile(
+            icon: Icons.settings_outlined,
+            title: 'Settings',
+            subtitle:
+            'App preferences',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* =========================================================
+   REUSABLE WIDGETS
+========================================================= */
+
+class SectionTitle extends StatelessWidget {
+  final String title;
+
+  const SectionTitle({
+    super.key,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 21,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+}
+
+class ActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const ActionCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius:
+      BorderRadius.circular(20),
+      child: Container(
+        padding:
+        const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color:
+          const Color(0xFF171720),
+          borderRadius:
+          BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.white10,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
+          mainAxisAlignment:
+          MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: color,
+              size: 28,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style:
+              const TextStyle(
+                fontWeight:
+                FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style:
+              const TextStyle(
+                color:
+                Colors.white54,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+
+  const StatCard({
+    super.key,
+    required this.title,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding:
+      const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color:
+        const Color(0xFF171720),
+        borderRadius:
+        BorderRadius.circular(22),
+        border: Border.all(
+          color: Colors.white10,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment:
+        CrossAxisAlignment.start,
+        mainAxisAlignment:
+        MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: Colors.pinkAccent,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style:
+            const TextStyle(
+              fontSize: 21,
+              fontWeight:
+              FontWeight.bold,
+            ),
+          ),
+          Text(
+            title,
+            style:
+            const TextStyle(
+              color:
+              Colors.white54,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class InsightCard extends StatelessWidget {
+  final String title;
+  final ClothingItem? item;
+  final IconData icon;
+
+  const InsightCard({
+    super.key,
+    required this.title,
+    required this.item,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (item == null) {
+      return const SizedBox();
+    }
+
+    return Container(
+      padding:
+      const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color:
+        const Color(0xFF171720),
+        borderRadius:
+        BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor:
+            Colors.pink.withOpacity(.15),
+            child: Icon(
+              icon,
+              color:
+              Colors.pinkAccent,
+            ),
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style:
+                  const TextStyle(
+                    color:
+                    Colors.white54,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item!.name,
+                  style:
+                  const TextStyle(
+                    fontWeight:
+                    FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '${item!.timesWorn} wears • ₹${item!.costPerWear.toStringAsFixed(0)}/wear',
+                  style:
+                  const TextStyle(
+                    color:
+                    Colors.white54,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AppTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final IconData icon;
+  final TextInputType? keyboardType;
+
+  const AppTextField({
+    super.key,
+    required this.controller,
+    required this.label,
+    required this.icon,
+    this.keyboardType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration:
+      InputDecoration(
+        labelText: label,
+        prefixIcon:
+        Icon(icon),
+        border:
+        const OutlineInputBorder(),
+      ),
+    );
+  }
+}
+
+class AppDropdown extends StatelessWidget {
+  final String label;
+  final String value;
+  final List<String> values;
+  final ValueChanged<String?> onChanged;
+
+  const AppDropdown({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.values,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      decoration:
+      InputDecoration(
+        labelText: label,
+        border:
+        const OutlineInputBorder(),
+      ),
+      items: values
+          .map(
+            (value) =>
+            DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            ),
+      )
+          .toList(),
+      onChanged: onChanged,
+    );
+  }
+}
+
+class ProfileTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const ProfileTile({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color:
+      const Color(0xFF171720),
+      margin:
+      const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor:
+          Colors.pink.withOpacity(.12),
+          child: Icon(
+            icon,
+            color:
+            Colors.pinkAccent,
+          ),
+        ),
+        title: Text(
+          title,
+          style:
+          const TextStyle(
+            fontWeight:
+            FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style:
+          const TextStyle(
+            fontSize: 11,
+          ),
+        ),
+        trailing:
+        const Icon(
+          Icons.chevron_right,
+        ),
+      ),
+    );
+  }
+}
+
+/* =========================================================
+   ICON + COLOR HELPERS
+========================================================= */
+
+IconData categoryIcon(String category) {
+  switch (category) {
+    case 'T-Shirt':
+      return Icons.checkroom;
+    case 'Shirt':
+      return Icons.dry_cleaning;
+    case 'Jeans':
+      return Icons.checkroom_outlined;
+    case 'Pants':
+      return Icons.accessibility_new;
+    case 'Jacket':
+      return Icons.dry_cleaning_outlined;
+    case 'Dress':
+      return Icons.woman;
+    case 'Shoes':
+      return Icons.directions_run;
+    case 'Accessories':
+      return Icons.watch;
+    default:
+      return Icons.checkroom;
+  }
+}
+
+Color itemColor(String color) {
+  switch (color.toLowerCase()) {
+    case 'white':
+      return Colors.white;
+    case 'black':
+      return Colors.grey;
+    case 'blue':
+      return Colors.blueAccent;
+    case 'red':
+      return Colors.redAccent;
+    case 'green':
+      return Colors.greenAccent;
+    case 'beige':
+      return Colors.orangeAccent;
+    case 'pink':
+      return Colors.pinkAccent;
+    case 'yellow':
+      return Colors.yellowAccent;
+    case 'brown':
+      return Colors.brown;
+    case 'grey':
+      return Colors.grey;
+    default:
+      return Colors.pinkAccent;
+  }
+}
